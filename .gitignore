@@ -1,4 +1,6 @@
 # Local source PDFs
 # These may include personally purchased or otherwise non-redistributable files.
 *.pdf
+!digital/*.pdf
+!print/*.pdf
 
