@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Learning Real Analysis PDFs</title>
+<style>
+:root {
+  --bg:#0f172a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8; --grid:#1f2937;
+  --def:#14b8a6; --thm:#60a5fa; --sel:#f59e0b; --danger:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}
+body{
+  background:
+    linear-gradient(to right, transparent 0 31px, var(--grid) 31px 32px),
+    linear-gradient(to bottom, transparent 0 31px, var(--grid) 31px 32px);
+  background-size:32px 32px;
+}
+a{color:#93c5fd}
+.shell{min-height:100vh;display:grid;grid-template-columns:320px minmax(0,1fr)}
+.sidebar{background:var(--panel);border-right:1px solid #243041;min-height:100vh}
+.section{padding:16px 18px;border-bottom:1px solid #243041}
+h1{font-size:1.2rem;margin:0 0 8px}
+h2{font-size:1rem;margin:0 0 10px}
+p,.tiny{color:var(--muted);line-height:1.45}
+.tiny{font-size:.8rem}
+button,select,input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:var(--ink)}
+button{cursor:pointer;font-weight:700}
+button:hover{background:#111827}
+.main{padding:24px;overflow:auto}
+.main-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+.page-title{font-size:1.35rem;font-weight:850;margin:0 0 4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:8px;overflow:hidden}
+.card:hover{border-color:rgba(96,165,250,.42);background:rgba(96,165,250,.06)}
+.edition-pill{display:inline-flex;align-items:center;width:auto;padding:3px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.4);background:rgba(148,163,184,.12);color:#cbd5e1;font-size:.76rem;font-weight:800;text-transform:uppercase}
+.edition-pill.digital{border-color:rgba(20,184,166,.52);background:rgba(20,184,166,.13);color:#99f6e4}
+.edition-pill.print{border-color:rgba(245,158,11,.55);background:rgba(245,158,11,.14);color:#fde68a}
+.edition-pill.reference{border-color:rgba(96,165,250,.55);background:rgba(96,165,250,.14);color:#bfdbfe}
+.pdf-title{font-weight:800;line-height:1.25;margin:8px 0}
+.pdf-meta{font-size:.78rem;color:#cbd5e1;line-height:1.45;overflow-wrap:anywhere}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.link-button{width:auto;display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:8px;border:1px solid rgba(147,197,253,.4);background:rgba(96,165,250,.1);color:#bfdbfe;font-weight:700;text-decoration:none}
+.link-button:hover{background:rgba(96,165,250,.18)}
+.status{margin:-2px 0 12px;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.03)}
+.empty{color:var(--muted);font-style:italic}
+.danger{border:1px solid rgba(239,68,68,.5);background:rgba(127,29,29,.16);color:#fecaca}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1}
+@media (max-width:800px){.shell{grid-template-columns:1fr}.sidebar{min-height:auto;border-right:0;border-bottom:1px solid #243041}.main{padding:16px}.main-head{display:block}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="section">
+      <h1>LRA PDFs</h1>
+      <p>Published PDF outputs for Learning Real Analysis.</p>
+      <div class="tiny" id="status">Loading PDF inventory.</div>
+    </div>
+    <div class="section">
+      <h2>Filters</h2>
+      <input id="searchBox" type="text" placeholder="Search volume, book, file..."/>
+      <div class="tiny" style="margin:10px 0 4px">Edition</div>
+      <select id="editionFilter">
+        <option value="All">All editions</option>
+        <option value="digital">Digital</option>
+        <option value="print">Print</option>
+        <option value="reference">Reference</option>
+      </select>
+    </div>
+    <div class="section">
+      <h2>Source</h2>
+      <div class="tiny">GitHub Pages deploys this repository with the same workflow-based Pages path used by the Knowledge Explorer.</div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="main-head">
+      <div>
+        <div class="page-title">Published Volume PDFs</div>
+        <div class="tiny">Open in the browser or download a local copy.</div>
+      </div>
+      <a class="link-button" href="https://github.com/wsollers/lra-volumes-output" target="_blank" rel="noopener">Repository</a>
+    </div>
+    <div class="status" id="summary">Scanning digital, print, and reference outputs.</div>
+    <div class="grid" id="pdfGrid"></div>
+  </main>
+</div>
+<script>
+const REPO = "wsollers/lra-volumes-output";
+const EDITIONS = ["digital", "print", "reference"];
+const fallbackVolumes = ["i","ii","iii","iv","v","vi","vii","viii"];
+const state = { pdfs: [], search: "", edition: "All" };
+const els = {
+  status: document.getElementById("status"),
+  summary: document.getElementById("summary"),
+  grid: document.getElementById("pdfGrid"),
+  search: document.getElementById("searchBox"),
+  edition: document.getElementById("editionFilter"),
+};
+function esc(value){return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function titleFor(name){
+  return name.replace(/\.pdf$/i,"").replace(/^lra-volume-/,"Volume ")
+    .replace(/^volume-/,"Volume ").replace(/-/g," ").replace(/\b([ivx]+)\b/gi,s=>s.toUpperCase())
+    .replace(/\b\w/g,s=>s.toUpperCase());
+}
+function hrefFor(item){return `${item.edition}/${encodeURIComponent(item.name).replace(/%2F/g,"/")}`;}
+async function listEdition(edition){
+  const api = `https://api.github.com/repos/${REPO}/contents/${edition}?ref=main`;
+  const response = await fetch(api, {headers: {"Accept": "application/vnd.github+json"}});
+  if (!response.ok) {
+    if (response.status === 404 && edition === "reference") return [];
+    throw new Error(`${edition} inventory failed with HTTP ${response.status}`);
+  }
+  const entries = await response.json();
+  return entries.filter(item => item.type === "file" && /\.pdf$/i.test(item.name))
+    .map(item => ({edition, name: item.name, size: item.size || 0}));
+}
+function fallbackInventory(){
+  return EDITIONS.flatMap(edition => fallbackVolumes.map(roman => ({
+    edition,
+    name: `lra-volume-${roman}.pdf`,
+    size: 0,
+    fallback: true,
+  })));
+}
+function formatSize(bytes){
+  if (!bytes) return "";
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`;
+}
+function render(){
+  const needle = state.search.trim().toLowerCase();
+  const filtered = state.pdfs.filter(item => {
+    if (state.edition !== "All" && item.edition !== state.edition) return false;
+    return !needle || `${item.edition} ${item.name} ${titleFor(item.name)}`.toLowerCase().includes(needle);
+  });
+  els.summary.textContent = `${filtered.length} of ${state.pdfs.length} PDF${state.pdfs.length === 1 ? "" : "s"} shown.`;
+  els.grid.innerHTML = filtered.map(item => {
+    const href = hrefFor(item);
+    const size = formatSize(item.size);
+    return `<article class="card">
+      <span class="edition-pill ${esc(item.edition)}">${esc(item.edition)}</span>
+      <div class="pdf-title">${esc(titleFor(item.name))}</div>
+      <div class="pdf-meta">${esc(item.name)}${size ? ` · ${esc(size)}` : ""}</div>
+      <div class="actions">
+        <a class="link-button" href="${esc(href)}" target="_blank" rel="noopener">Open PDF</a>
+        <a class="link-button" href="${esc(href)}" download>Download</a>
+      </div>
+    </article>`;
+  }).join("") || `<div class="card"><div class="empty">No PDFs match the current filters.</div></div>`;
+}
+async function load(){
+  try {
+    const groups = await Promise.all(EDITIONS.map(listEdition));
+    state.pdfs = groups.flat().sort((a,b) => a.edition.localeCompare(b.edition) || a.name.localeCompare(b.name));
+    els.status.textContent = state.pdfs.length ? `Loaded ${state.pdfs.length} published PDFs.` : "No published PDFs found yet.";
+  } catch (error) {
+    state.pdfs = fallbackInventory();
+    els.status.textContent = "Using fallback volume links.";
+    els.summary.classList.add("danger");
+    els.summary.textContent = error.message;
+  }
+  render();
+}
+els.search.addEventListener("input", () => { state.search = els.search.value; render(); });
+els.edition.addEventListener("change", () => { state.edition = els.edition.value; render(); });
+load();
+</script>
+</body>
+</html>

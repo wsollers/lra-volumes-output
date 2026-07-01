@@ -6,6 +6,8 @@ on:
     paths:
       - 'digital/**'
       - 'print/**'
+      - 'reference/**'
+      - 'index.html'
       - 'README.md'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

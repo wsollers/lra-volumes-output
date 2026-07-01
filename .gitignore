@@ -3,4 +3,4 @@
 *.pdf
 !digital/*.pdf
 !print/*.pdf
-
+!reference/*.pdf
